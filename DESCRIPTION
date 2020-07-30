@@ -1,0 +1,33 @@
+Package: DNAmCrosshyb
+Title: DNAmCrosshyb
+Version: 0.0.0.9000
+Authors@R: person("Paul", "Hop", email = "p.j.hop-2@umcutrecht.nl", role = c("aut", "cre"))
+Description: Helper functions to detect cross-hybridization on Illumina DNAm arrays
+Depends: R (>= 3.4.0)
+biocViews:
+Imports:
+  dplyr,
+  ggplot2,
+  tibble,
+  purrr,
+  tidyr,
+  S4Vectors,
+  IRanges,
+  BiocGenerics,
+  stringr,
+  stringi,
+  magrittr,
+  shiny,
+  Biostrings,
+  GenomicRanges,
+  BiocParallel,
+  minfi,
+  BSgenome.Hsapiens.UCSC.hg19.masked,
+  BSgenome.Hsapiens.UCSC.hg38.masked,
+  wateRmelon
+Suggests:
+  minfiData
+Encoding: UTF-8
+LazyData: true
+License: GPL-3
+RoxygenNote: 7.1.1

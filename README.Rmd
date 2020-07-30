@@ -1,0 +1,172 @@
+---
+output: github_document
+---
+
+```{r setup, echo = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+`DNAmCrosshyb` : Collection of functions useful in detecting cross-reactive probes on Illumina 450k/EPIC DNA methylation arrays.
+
+
+The following functions are implemented:
+
+- `map_probes` : Map 450k/EPIC probes to the reference genome, allowing for mismatches/INDELs.
+- `get_nr_matches_per_probe` : Get number of matches for per match length (on output of `map_probes` function).
+- `find_repeat_overlaps` : Check if matches overlap with repeats (UCSC masks) (on output of `map_probes` function).
+- `map_probes_sequence` : Map 450k/EPIC probes to a user-specified DNA sequence.  
+- `get_probe_overlaps` : Check if there are overlapping 3'-subsequences in a set of probes.  
+- `get_OOB` : Get out-of-band normalized beta-values and/or intensities.  
+- `locusplot`: Plot a region of p-values.  
+
+### Installation
+
+```{r eval = FALSE}
+## Install from repo 
+## Note: installation may take a little while, since the package includes
+## probe sequences and annotation as internal data.
+devtools::install_github("pjhop/DNAmCrosshyb")
+
+## Install from source
+install.packages("DNAmCrosshyb.tar.gz", repos=NULL, type="source")
+
+# current version
+packageVersion("DNAmCrosshyb")
+```
+
+### Mapping probes to the reference genome
+
+```{r include = FALSE, cache = FALSE}
+library(DNAmCrosshyb)
+library(ggplot2)
+library(dplyr)
+```
+
+#### Map Probes 
+
+Map some probes to reference genome (hg19), for each width from 30bp to 50bp (in steps of 5). 
+Bisulfite-converted reference genome can be downloaded from: https://drive.google.com/drive/folders/1n8pwc5zvT4GAByOaGZTv1PuJKREZMfv4
+
+```{r map_probes, warning = FALSE, message = FALSE, cache = TRUE}
+library(DNAmCrosshyb)
+probes <- c("cg00005164", "cg12344104", "cg25521682", "cg27660038", "cg20554142", "cg03890998", "cg00947801")
+matches <- map_probes(probes,
+                      path = "genome_bs/hg19",
+                      chromosomes = "all",
+                      min_width = 30,
+                      max_width = 50,
+                      step_size = 5,
+                      allow_mismatch = FALSE,
+                      allow_INDEL = FALSE,
+                      cores = 1
+                     )
+head(matches %>% data.frame())
+```
+
+#### Number of matches per probe 
+
+```{r nr_matches, warning=FALSE, cache = FALSE}
+nr_matches <- get_nr_matches_per_probe(matches)
+nr_matches
+```
+
+#### Overlap with repeats
+
+```{r repeat_overlap, warning = FALSE, cache = FALSE, message  = FALSE}
+matches <- find_repeat_overlaps(matches, genome_build = "hg19", min_overlap = "any")
+head(matches %>% data.frame())
+```
+
+### Map probes to a user-specified DNA sequence
+
+#### Assume the repeat is methylated
+
+Map probes to the *C9orf72* hexanucleotide repeat:
+
+```{r map_probes_sequence, warning = FALSE, message = FALSE, cache = TRUE}
+# Map probes to the C9orf72 hexanucleotide repeat
+repeat_sequence <- paste(rep("GGCCCC", 10), collapse="")
+
+matches_c9 <- map_probes_sequence(sequence = repeat_sequence, next_base = "G", prev_base = "C",
+                            array = "450k", min_width = 10, max_width = 25, allow_indel = FALSE, 
+                            allow_mismatch = FALSE, step_size = 1, use_Y = FALSE, methylation_status = "methylated")
+head(matches_c9 %>% data.frame())
+```
+
+#### Allow mismatch (>=6 bp from 3'-end of probe)
+
+```{r map_probes_sequence2, warning = FALSE, message = FALSE, cache = TRUE}
+# Map probes to the C9orf72 hexanucleotide repeat
+repeat_sequence <- paste(rep("GGCCCC", 10), collapse="")
+
+matches_c9 <- map_probes_sequence(sequence = repeat_sequence, next_base = "G", prev_base = "C",
+                            array = "450k", min_width = 10, max_width = 25, allow_indel = FALSE, 
+                            allow_mismatch = TRUE, min_distance = 6,
+                            step_size = 1, use_Y = FALSE, methylation_status = "methylated")
+head(matches_c9 %>% dplyr::filter(n_mismatch > 0) %>% data.frame())
+```
+
+#### Run in parallel
+
+```{r map_probes_sequences_parallel, warning = FALSE, message = FALSE, cache = TRUE}
+# Map probes to the C9orf72 hexanucleotide repeat
+repeat_sequence <- paste(rep("GGCCCC", 10), collapse="")
+
+matches_c9_2 <- map_probes_sequence(sequence = repeat_sequence, next_base = "G", prev_base = "C",
+                            array = "450k", min_width = 10, max_width = 25, allow_indel = FALSE, 
+                            allow_mismatch = TRUE, min_distance = 6,
+                            step_size = 1, use_Y = FALSE, methylation_status = "methylated",
+                            cores = 4)
+head(matches_c9_2 %>% data.frame())
+```
+
+### Sequence overlap between a set of probes
+
+The `get_probe_overlaps` can be used to check for overlapping 3'-subsequences in a set of probes. Here we apply this function to probes that map to the C9 repeat (identified above) and some random probes
+
+```{r get_probe_overlaps, warning = FALSE, message = FALSE, cache = FALSE}
+matches_c9_20bp <- matches_c9 %>% dplyr::filter(width >= 20)
+set.seed(10)
+random_probes <- sample(DNAmCrosshyb:::anno450k$Name, size = 10)
+
+# Calculate overlaps
+overlaps <- get_probe_overlaps(c(unique(matches_c9_20bp$Probe), random_probes))
+
+## Note this also includes overlap between _unmethylated and _methylated bead types of type I probes
+overlaps %>% dplyr::arrange(desc(overlaps$overlap)) %>% head(10)
+```
+
+Plot:
+
+```{r, warning = FALSE, message = FALSE, cache = FALSE}
+ggplot(overlaps %>% filter(Probe_Index != Probe_Target), 
+       aes(x = overlap)) +
+  geom_histogram() +
+  theme_classic() + 
+  xlab("Pair-wise probe overlap (bp)") +
+  theme(text = element_text(size=13))
+```
+
+
+### Extracting and normalizing out-of-band (OOB) intensities and betas 
+
+Extracting OOB betas from an RGset (*minfi*).
+
+```{r OOB, warning = FALSE, message = FALSE, cache = TRUE}
+# For this example, the minfiData package is used.
+library(minfiData)
+
+# Load data
+baseDir <- system.file("extdata", package="minfiData")
+samplesheet <- read.metharray.sheet(baseDir)
+rgset <- read.metharray(samplesheet$Basename, extended=TRUE)
+
+# Get normalized OOB betas (only keep beta-values, other options are 'intensity' and 'both')
+oob_betas_normalized <- get_OOB(rgset, normalized = TRUE, keep = "beta")
+
+# Show subset
+oob_betas_normalized$beta[1:5,1:5]
+```
+
+
+
