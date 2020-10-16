@@ -38,9 +38,14 @@ packageVersion("DNAmCrosshyb")
 #### Map Probes
 
 Map some probes to reference genome (hg19), for each width from 30bp to
-50bp (in steps of 5). Bisulfite-converted reference genome can be
-downloaded from:
-<https://drive.google.com/drive/folders/1n8pwc5zvT4GAByOaGZTv1PuJKREZMfv4>
+50bp (in steps of 5). Bisulfite-converted reference genomes can be
+generated using the following scripts:
+<https://github.com/pjhop/DNAmCrosshyb/blob/master/data-raw/bisulfite_convert_hg19.R>
+and
+<https://github.com/pjhop/DNAmCrosshyb/blob/master/data-raw/bisulfite_convert_hg38.R>
+
+Bisulfite-converted genomes in the R .rds file format are available at:
+<https://zenodo.org/record/4088020>
 
 ``` r
 library(DNAmCrosshyb)
