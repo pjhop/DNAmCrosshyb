@@ -45,7 +45,7 @@ and
 <https://github.com/pjhop/DNAmCrosshyb/blob/master/data-raw/bisulfite_convert_hg38.R>
 
 Bisulfite-converted genomes in the R .rds file format are available at:
-<https://zenodo.org/record/4088020>
+<https://doi.org/10.5281/zenodo.4088019>
 
 ``` r
 library(DNAmCrosshyb)
