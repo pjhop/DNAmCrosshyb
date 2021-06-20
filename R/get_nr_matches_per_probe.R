@@ -19,8 +19,11 @@ get_nr_matches_per_probe <- function(matches) {
     tidyr::spread(key = width, value = n) 
   
   matches[is.na(matches)] <- 0
-  for(i in ncol(matches):3) {
-    matches[[i-1]] <- matches[[i]] + matches[[i-1]]
+  
+  if(ncol(matches) > 2) {
+    for(i in ncol(matches):3) {
+      matches[[i-1]] <- matches[[i]] + matches[[i-1]]
+    }
   }
   colnames(matches)[2:ncol(matches)] <- paste0("bp", colnames(matches)[2:ncol(matches)])
   matches
